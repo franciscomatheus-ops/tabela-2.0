@@ -111,22 +111,13 @@
             }
         }
         
-        /* Toggle names in standings */
-        .toggle-names-btn {
-            background-color: #e0e7ff;
-            color: #3b82f6;
-            border-radius: 20px;
-            padding: 4px 12px;
-            font-size: 14px;
-            margin-left: 10px;
+        /* Hide team selection in standings */
+        .standings-mode .team-selection {
+            display: none;
         }
         
-        .hidden-names .team-name {
-            visibility: hidden;
-        }
-        
-        .hidden-names .player-name {
-            visibility: hidden;
+        .standings-mode .header-content {
+            padding-bottom: 0;
         }
     </style>
 </head>
@@ -134,26 +125,28 @@
     <div class="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <!-- Header -->
         <header class="bg-white rounded-xl shadow-md mb-4 sm:mb-6 overflow-hidden">
-            <h1 class="text-xl sm:text-2xl font-bold text-center py-3 sm:py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                <i class="fas fa-fire mr-2"></i> Free Fire Tournament Dashboard
-            </h1>
-            
-            <!-- Main Tabs -->
-            <div class="flex border-b">
-                <button id="teams-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium tab-active" onclick="switchTab('teams')">
-                    <i class="fas fa-users mr-1 sm:mr-2"></i> Equipes
-                </button>
-                <button id="players-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium" onclick="switchTab('players')">
-                    <i class="fas fa-user mr-1 sm:mr-2"></i> Jogadores
-                </button>
-                <button id="standings-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium" onclick="switchTab('standings')">
-                    <i class="fas fa-trophy mr-1 sm:mr-2"></i> Classificação
-                </button>
-            </div>
-            
-            <!-- Team Selection -->
-            <div id="team-selection" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 p-2 sm:p-4 team-selection">
-                <!-- Teams will be populated here -->
+            <div class="header-content">
+                <h1 class="text-xl sm:text-2xl font-bold text-center py-3 sm:py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                    <i class="fas fa-fire mr-2"></i> Free Fire Tournament Dashboard
+                </h1>
+                
+                <!-- Main Tabs -->
+                <div class="flex border-b">
+                    <button id="teams-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium tab-active" onclick="switchTab('teams')">
+                        <i class="fas fa-users mr-1 sm:mr-2"></i> Equipes
+                    </button>
+                    <button id="players-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium" onclick="switchTab('players')">
+                        <i class="fas fa-user mr-1 sm:mr-2"></i> Jogadores
+                    </button>
+                    <button id="standings-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium" onclick="switchTab('standings')">
+                        <i class="fas fa-trophy mr-1 sm:mr-2"></i> Classificação
+                    </button>
+                </div>
+                
+                <!-- Team Selection -->
+                <div id="team-selection" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 p-2 sm:p-4 team-selection">
+                    <!-- Teams will be populated here -->
+                </div>
             </div>
         </header>
         
@@ -190,8 +183,7 @@
                     matches: 5,
                     currentTab: 'teams',
                     currentTeam: 'team1',
-                    currentPlayerTeam: 'team1',
-                    hideNames: false
+                    currentPlayerTeam: 'team1'
                 },
                 teams: {},
                 players: {}
@@ -281,35 +273,20 @@
             document.getElementById('standings-tab').classList.remove('tab-active');
             document.getElementById(`${tab}-tab`).classList.add('tab-active');
             
-            loadContent(tab);
-        }
-        
-        // Toggle names visibility
-        function toggleNames() {
-            const data = JSON.parse(localStorage.getItem('TournamentData'));
-            data.settings.hideNames = !data.settings.hideNames;
-            localStorage.setItem('TournamentData', JSON.stringify(data));
-            
-            const mainContent = document.getElementById('main-content');
-            if (data.settings.hideNames) {
-                mainContent.classList.add('hidden-names');
+            // Toggle standings mode
+            const header = document.querySelector('header');
+            if (tab === 'standings') {
+                header.classList.add('standings-mode');
             } else {
-                mainContent.classList.remove('hidden-names');
+                header.classList.remove('standings-mode');
             }
             
-            // Update button text
-            const toggleBtn = document.getElementById('toggle-names-btn');
-            if (toggleBtn) {
-                toggleBtn.innerHTML = data.settings.hideNames ? 
-                    '<i class="fas fa-eye mr-1"></i> Mostrar Nomes' : 
-                    '<i class="fas fa-eye-slash mr-1"></i> Ocultar Nomes';
-            }
+            loadContent(tab);
         }
         
         // Load content based on current tab
         function loadContent(tab) {
             const mainContent = document.getElementById('main-content');
-            mainContent.classList.remove('hidden-names');
             
             switch(tab) {
                 case 'teams':
@@ -530,7 +507,7 @@
                     <tr class="${index < 3 ? `rank-${index+1}` : ''} hover:bg-gray-50">
                         <td class="py-2 sm:py-3 px-2 sm:px-4 text-center font-medium">${index + 1}</td>
                         <td class="py-2 sm:py-3 px-2 sm:px-4">
-                            <div class="flex items-center team-name">
+                            <div class="flex items-center">
                                 <i class="fas fa-users mr-1 sm:mr-2 text-blue-500"></i>
                                 ${team.name}
                             </div>
@@ -549,7 +526,7 @@
                 mvpHTML += `
                     <tr class="hover:bg-gray-50">
                         <td class="py-2 sm:py-3 px-2 sm:px-4">
-                            <div class="flex items-center player-name">
+                            <div class="flex items-center">
                                 ${index === 0 ? '<span class="mvp-badge text-xs px-2 py-1 rounded-full mr-1 sm:mr-2">MVP</span>' : ''}
                                 ${player.name}
                                 <span class="text-xs text-gray-500 ml-1 sm:ml-2 hide-on-mobile">(${team.name})</span>
@@ -562,14 +539,9 @@
             
             const html = `
                 <div>
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-2">
-                        <h2 class="text-lg sm:text-xl font-bold flex items-center">
-                            <i class="fas fa-trophy mr-2 text-yellow-500"></i> Classificação Geral
-                        </h2>
-                        <button id="toggle-names-btn" onclick="toggleNames()" class="toggle-names-btn text-xs sm:text-sm">
-                            <i class="fas fa-eye-slash mr-1"></i> Ocultar Nomes
-                        </button>
-                    </div>
+                    <h2 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center">
+                        <i class="fas fa-trophy mr-2 text-yellow-500"></i> Classificação Geral
+                    </h2>
                     
                     <div class="grid gap-4 sm:gap-6 standings-grid">
                         <div>
@@ -621,17 +593,11 @@
             `;
             
             document.getElementById('main-content').innerHTML = html;
-            
-            // Apply initial hide names state if needed
-            if (data.settings.hideNames) {
-                document.getElementById('main-content').classList.add('hidden-names');
-                document.getElementById('toggle-names-btn').innerHTML = '<i class="fas fa-eye mr-1"></i> Mostrar Nomes';
-            }
         }
         
         // Helper function to calculate points
         function calculatePoints(position, kills, isFinalMatch = false) {
-            if (!position || position < 1 || position > 12) return kills || 0;
+            if (!position || position < 1 || position > 10) return kills || 0;
             
             let points = 0;
             
