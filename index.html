@@ -595,22 +595,34 @@
             document.getElementById('main-content').innerHTML = html;
         }
         
-        // Helper function to calculate points
+        // Helper function to calculate points based on the new system
         function calculatePoints(position, kills, isFinalMatch = false) {
-            if (!position || position < 1 || position > 10) return kills || 0;
+            if (!position || position < 1 || position > 12) return kills || 0;
             
-            let points = 0;
+            // Position points mapping
+            const positionPoints = {
+                1: 12,
+                2: 9,
+                3: 8,
+                4: 7,
+                5: 6,
+                6: 5,
+                7: 4,
+                8: 3,
+                9: 2,
+                10: 1,
+                11: 0,
+                12: 0
+            };
             
-            // Position points
-            if (position === 1) {
-                points = isFinalMatch ? 24 : 12; // 1st place
-            } else {
-                points = isFinalMatch ? 
-                    (12 - position) * 2 : // Double points for final match
-                    (12 - position);
+            let points = positionPoints[position] || 0;
+            
+            // Double points for final match
+            if (isFinalMatch) {
+                points *= 2;
             }
             
-            // Kill points (1 per kill, 2 for final match)
+            // Add kill points (1 per kill, 2 for final match)
             points += isFinalMatch ? (kills || 0) * 2 : (kills || 0);
             
             return points;
