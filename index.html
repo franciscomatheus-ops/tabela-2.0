@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Fire Tournament Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f7fa;
+        }
+        
+        .tab-active {
+            background-color: #3b82f6;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .team-active {
+            background-color: #e0e7ff;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .player-active {
+            background-color: #e0e7ff;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .rank-1 {
+            background-color: #fef3c7;
+        }
+        
+        .rank-2 {
+            background-color: #f5f5f4;
+        }
+        
+        .rank-3 {
+            background-color: #f0fdf4;
+        }
+        
+        .mvp-badge {
+            background-color: #f59e0b;
+            color: white;
+        }
+        
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #3b82f6;
+        }
+        
+        .kill-input {
+            width: 50px;
+            text-align: center;
+        }
+        
+        .position-input {
+            width: 50px;
+            text-align: center;
+        }
+        
+        .team-name-input {
+            width: 100%;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .player-name-input {
+            width: 100%;
+        }
+        
+        .total-cell {
+            font-weight: 600;
+            background-color: #e0e7ff;
+        }
+        
+        .highlight-cell {
+            background-color: #f0fdf4;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .team-selection {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .position-input, .kill-input {
+                width: 40px;
+                font-size: 14px;
+            }
+            
+            .team-name-input, .player-name-input {
+                font-size: 14px;
+            }
+            
+            .hide-on-mobile {
+                display: none;
+            }
+            
+            .standings-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .player-kills-table th, 
+            .player-kills-table td {
+                padding: 4px 2px;
+                font-size: 13px;
+            }
+        }
+        
+        /* Toggle names in standings */
+        .toggle-names-btn {
+            background-color: #e0e7ff;
+            color: #3b82f6;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        
+        .hidden-names .team-name {
+            visibility: hidden;
+        }
+        
+        .hidden-names .player-name {
+            visibility: hidden;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <!-- Header -->
+        <header class="bg-white rounded-xl shadow-md mb-4 sm:mb-6 overflow-hidden">
+            <h1 class="text-xl sm:text-2xl font-bold text-center py-3 sm:py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <i class="fas fa-fire mr-2"></i> Free Fire Tournament Dashboard
+            </h1>
+            
+            <!-- Main Tabs -->
+            <div class="flex border-b">
+                <button id="teams-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium tab-active" onclick="switchTab('teams')">
+                    <i class="fas fa-users mr-1 sm:mr-2"></i> Equipes
+                </button>
+                <button id="players-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium" onclick="switchTab('players')">
+                    <i class="fas fa-user mr-1 sm:mr-2"></i> Jogadores
+                </button>
+                <button id="standings-tab" class="flex-1 py-2 sm:py-3 px-2 sm:px-4 text-center text-sm sm:text-base font-medium" onclick="switchTab('standings')">
+                    <i class="fas fa-trophy mr-1 sm:mr-2"></i> Classificação
+                </button>
+            </div>
+            
+            <!-- Team Selection -->
+            <div id="team-selection" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 p-2 sm:p-4 team-selection">
+                <!-- Teams will be populated here -->
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main id="main-content" class="bg-white rounded-xl shadow-md p-2 sm:p-4 mb-4 sm:mb-6">
+            <!-- Content will be loaded dynamically -->
+            <div id="loading" class="text-center py-8">
+                <i class="fas fa-spinner fa-spin text-blue-500 text-2xl"></i>
+                <p class="mt-2">Carregando...</p>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="text-center text-gray-500 text-xs sm:text-sm py-2 sm:py-4">
+            <p>Desenvolvido para torneios de Free Fire © 2023</p>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize data
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('TournamentData')) {
+                initializeData();
+            }
+            
+            loadTeams();
+            loadContent('teams');
+        });
+        
+        // Data structure
+        function initializeData() {
+            const tournamentData = {
+                settings: {
+                    matches: 5,
+                    currentTab: 'teams',
+                    currentTeam: 'team1',
+                    currentPlayerTeam: 'team1',
+                    hideNames: false
+                },
+                teams: {},
+                players: {}
+            };
+            
+            // Create 12 teams
+            for (let i = 1; i <= 12; i++) {
+                const teamId = `team${i}`;
+                tournamentData.teams[teamId] = {
+                    id: teamId,
+                    name: `Time ${i}`,
+                    matches: {},
+                    totalPoints: 0,
+                    totalKills: 0
+                };
+                
+                // Initialize matches
+                for (let m = 1; m <= tournamentData.settings.matches; m++) {
+                    tournamentData.teams[teamId].matches[`match${m}`] = {
+                        position: 0,
+                        kills: 0,
+                        points: 0
+                    };
+                }
+                
+                // Initialize players (5 per team)
+                for (let p = 1; p <= 5; p++) {
+                    const playerId = `${teamId}_player${p}`;
+                    tournamentData.players[playerId] = {
+                        id: playerId,
+                        teamId: teamId,
+                        name: `Jogador ${p}`,
+                        kills: {},
+                        totalKills: 0
+                    };
+                    
+                    // Initialize kills per match
+                    for (let m = 1; m <= tournamentData.settings.matches; m++) {
+                        tournamentData.players[playerId].kills[`match${m}`] = 0;
+                    }
+                }
+            }
+            
+            localStorage.setItem('TournamentData', JSON.stringify(tournamentData));
+        }
+        
+        // Load teams into the team selection
+        function loadTeams() {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            const teamSelection = document.getElementById('team-selection');
+            teamSelection.innerHTML = '';
+            
+            Object.values(data.teams).forEach(team => {
+                const teamBtn = document.createElement('button');
+                teamBtn.id = team.id;
+                teamBtn.className = `py-1 sm:py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium border border-gray-200 hover:bg-blue-50 transition ${team.id === data.settings.currentTeam ? 'team-active' : ''}`;
+                teamBtn.innerHTML = `<i class="fas fa-users mr-1"></i> ${team.name}`;
+                teamBtn.onclick = () => selectTeam(team.id);
+                
+                teamSelection.appendChild(teamBtn);
+            });
+        }
+        
+        // Select team
+        function selectTeam(teamId) {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            data.settings.currentTeam = teamId;
+            
+            if (data.settings.currentTab === 'players') {
+                data.settings.currentPlayerTeam = teamId;
+            }
+            
+            localStorage.setItem('TournamentData', JSON.stringify(data));
+            loadTeams();
+            loadContent(data.settings.currentTab);
+        }
+        
+        // Switch between tabs
+        function switchTab(tab) {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            data.settings.currentTab = tab;
+            localStorage.setItem('TournamentData', JSON.stringify(data));
+            
+            // Update tab UI
+            document.getElementById('teams-tab').classList.remove('tab-active');
+            document.getElementById('players-tab').classList.remove('tab-active');
+            document.getElementById('standings-tab').classList.remove('tab-active');
+            document.getElementById(`${tab}-tab`).classList.add('tab-active');
+            
+            loadContent(tab);
+        }
+        
+        // Toggle names visibility
+        function toggleNames() {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            data.settings.hideNames = !data.settings.hideNames;
+            localStorage.setItem('TournamentData', JSON.stringify(data));
+            
+            const mainContent = document.getElementById('main-content');
+            if (data.settings.hideNames) {
+                mainContent.classList.add('hidden-names');
+            } else {
+                mainContent.classList.remove('hidden-names');
+            }
+            
+            // Update button text
+            const toggleBtn = document.getElementById('toggle-names-btn');
+            if (toggleBtn) {
+                toggleBtn.innerHTML = data.settings.hideNames ? 
+                    '<i class="fas fa-eye mr-1"></i> Mostrar Nomes' : 
+                    '<i class="fas fa-eye-slash mr-1"></i> Ocultar Nomes';
+            }
+        }
+        
+        // Load content based on current tab
+        function loadContent(tab) {
+            const mainContent = document.getElementById('main-content');
+            mainContent.classList.remove('hidden-names');
+            
+            switch(tab) {
+                case 'teams':
+                    loadTeamPoints();
+                    break;
+                case 'players':
+                    loadPlayerKills();
+                    break;
+                case 'standings':
+                    loadStandings();
+                    break;
+                default:
+                    mainContent.innerHTML = '<div class="text-center py-8 text-gray-500">Selecione uma opção</div>';
+            }
+        }
+        
+        // Load team points editor
+        function loadTeamPoints() {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            const team = data.teams[data.settings.currentTeam];
+            
+            let matchesHTML = '';
+            let totalPoints = 0;
+            let totalKills = 0;
+            
+            for (let m = 1; m <= data.settings.matches; m++) {
+                const match = team.matches[`match${m}`];
+                const points = calculatePoints(match.position, match.kills, m === 5);
+                
+                matchesHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-2 px-2 sm:px-4 text-center font-medium">P${m}</td>
+                        <td class="py-2 px-2 sm:px-4 text-center">
+                            <input type="number" min="0" max="12" 
+                                class="position-input border rounded py-1" 
+                                value="${match.position || ''}" 
+                                onchange="updateTeamMatchData('${team.id}', 'match${m}', 'position', this.value)">
+                        </td>
+                        <td class="py-2 px-2 sm:px-4 text-center">
+                            <input type="number" min="0" 
+                                class="kill-input border rounded py-1" 
+                                value="${match.kills || ''}" 
+                                onchange="updateTeamMatchData('${team.id}', 'match${m}', 'kills', this.value)">
+                        </td>
+                        <td class="py-2 px-2 sm:px-4 text-center font-medium ${m === 5 ? 'highlight-cell' : ''}">
+                            ${points}
+                        </td>
+                    </tr>
+                `;
+                
+                totalPoints += points;
+                totalKills += match.kills || 0;
+            }
+            
+            const html = `
+                <div>
+                    <h2 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center justify-center">
+                        <i class="fas fa-users mr-2 text-blue-500"></i> 
+                        <input type="text" class="team-name-input border-b-2 border-blue-100 py-1" 
+                            value="${team.name}" 
+                            onchange="updateTeamName('${team.id}', this.value)">
+                    </h2>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-2 px-2 sm:px-4 text-center">Partida</th>
+                                    <th class="py-2 px-2 sm:px-4 text-center">Pos</th>
+                                    <th class="py-2 px-2 sm:px-4 text-center">Abates</th>
+                                    <th class="py-2 px-2 sm:px-4 text-center">Pontos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${matchesHTML}
+                                <tr class="border-t">
+                                    <td class="py-2 px-2 sm:px-4 font-medium">Total</td>
+                                    <td class="py-2 px-2 sm:px-4"></td>
+                                    <td class="py-2 px-2 sm:px-4 text-center font-medium">${totalKills}</td>
+                                    <td class="py-2 px-2 sm:px-4 text-center font-medium total-cell">${totalPoints}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500">
+                        <p><i class="fas fa-info-circle mr-1"></i> A 5ª partida vale o dobro de pontos.</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('main-content').innerHTML = html;
+        }
+        
+        // Load player kills editor
+        function loadPlayerKills() {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            const teamId = data.settings.currentPlayerTeam;
+            const team = data.teams[teamId];
+            
+            let playersHTML = '';
+            
+            // Get players for this team
+            const teamPlayers = Object.values(data.players).filter(p => p.teamId === teamId);
+            
+            teamPlayers.forEach((player, index) => {
+                let killsHTML = '';
+                let totalKills = 0;
+                
+                for (let m = 1; m <= data.settings.matches; m++) {
+                    killsHTML += `
+                        <td class="py-2 px-1 sm:px-2 text-center">
+                            <input type="number" min="0" 
+                                class="kill-input border rounded py-1" 
+                                value="${player.kills[`match${m}`] || ''}" 
+                                onchange="updatePlayerKills('${player.id}', 'match${m}', this.value)">
+                        </td>
+                    `;
+                    
+                    totalKills += player.kills[`match${m}`] || 0;
+                }
+                
+                playersHTML += `
+                    <tr class="hover:bg-gray-50 ${index === 0 ? 'border-t' : ''}">
+                        <td class="py-2 px-2 sm:px-4">
+                            <input type="text" class="player-name-input border-b border-gray-200 py-1" 
+                                value="${player.name}" 
+                                onchange="updatePlayerName('${player.id}', this.value)">
+                        </td>
+                        ${killsHTML}
+                        <td class="py-2 px-2 sm:px-4 text-center font-medium total-cell">${totalKills}</td>
+                    </tr>
+                `;
+            });
+            
+            const html = `
+                <div>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-2">
+                        <h2 class="text-lg sm:text-xl font-bold flex items-center">
+                            <i class="fas fa-user mr-2 text-blue-500"></i> 
+                            Abates por Jogador
+                        </h2>
+                        <div class="text-xs sm:text-sm bg-blue-50 text-blue-600 px-2 sm:px-3 py-1 rounded-full">
+                            <i class="fas fa-users mr-1"></i> ${team.name}
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full player-kills-table">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-2 px-2 sm:px-4 text-left">Jogador</th>
+                                    ${Array.from({length: data.settings.matches}, (_, i) => 
+                                        `<th class="py-2 px-1 sm:px-2 text-center">P${i+1}</th>`
+                                    ).join('')}
+                                    <th class="py-2 px-2 sm:px-4 text-center">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${playersHTML}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('main-content').innerHTML = html;
+        }
+        
+        // Load standings
+        function loadStandings() {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            
+            // Calculate totals for all teams
+            const teams = Object.values(data.teams).map(team => {
+                let totalPoints = 0;
+                let totalKills = 0;
+                
+                for (let m = 1; m <= data.settings.matches; m++) {
+                    const match = team.matches[`match${m}`];
+                    const points = calculatePoints(match.position, match.kills, m === 5);
+                    
+                    totalPoints += points;
+                    totalKills += match.kills || 0;
+                }
+                
+                return {
+                    ...team,
+                    totalPoints,
+                    totalKills
+                };
+            });
+            
+            // Sort teams by points (then by kills if tied)
+            teams.sort((a, b) => {
+                if (b.totalPoints === a.totalPoints) {
+                    return b.totalKills - a.totalKills;
+                }
+                return b.totalPoints - a.totalPoints;
+            });
+            
+            // Calculate MVP (player with most kills)
+            const allPlayers = Object.values(data.players);
+            allPlayers.forEach(player => {
+                player.totalKills = 0;
+                for (let m = 1; m <= data.settings.matches; m++) {
+                    player.totalKills += player.kills[`match${m}`] || 0;
+                }
+            });
+            
+            allPlayers.sort((a, b) => b.totalKills - a.totalKills);
+            const topPlayers = allPlayers.slice(0, 3);
+            
+            // Generate standings HTML
+            let standingsHTML = '';
+            teams.forEach((team, index) => {
+                standingsHTML += `
+                    <tr class="${index < 3 ? `rank-${index+1}` : ''} hover:bg-gray-50">
+                        <td class="py-2 sm:py-3 px-2 sm:px-4 text-center font-medium">${index + 1}</td>
+                        <td class="py-2 sm:py-3 px-2 sm:px-4">
+                            <div class="flex items-center team-name">
+                                <i class="fas fa-users mr-1 sm:mr-2 text-blue-500"></i>
+                                ${team.name}
+                            </div>
+                        </td>
+                        <td class="py-2 sm:py-3 px-2 sm:px-4 text-center">${team.totalPoints - team.totalKills}</td>
+                        <td class="py-2 sm:py-3 px-2 sm:px-4 text-center">${team.totalKills}</td>
+                        <td class="py-2 sm:py-3 px-2 sm:px-4 text-center font-medium">${team.totalPoints}</td>
+                    </tr>
+                `;
+            });
+            
+            // Generate MVP HTML
+            let mvpHTML = '';
+            topPlayers.forEach((player, index) => {
+                const team = data.teams[player.teamId];
+                mvpHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-2 sm:py-3 px-2 sm:px-4">
+                            <div class="flex items-center player-name">
+                                ${index === 0 ? '<span class="mvp-badge text-xs px-2 py-1 rounded-full mr-1 sm:mr-2">MVP</span>' : ''}
+                                ${player.name}
+                                <span class="text-xs text-gray-500 ml-1 sm:ml-2 hide-on-mobile">(${team.name})</span>
+                            </div>
+                        </td>
+                        <td class="py-2 sm:py-3 px-2 sm:px-4 text-center font-medium">${player.totalKills}</td>
+                    </tr>
+                `;
+            });
+            
+            const html = `
+                <div>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-2">
+                        <h2 class="text-lg sm:text-xl font-bold flex items-center">
+                            <i class="fas fa-trophy mr-2 text-yellow-500"></i> Classificação Geral
+                        </h2>
+                        <button id="toggle-names-btn" onclick="toggleNames()" class="toggle-names-btn text-xs sm:text-sm">
+                            <i class="fas fa-eye-slash mr-1"></i> Ocultar Nomes
+                        </button>
+                    </div>
+                    
+                    <div class="grid gap-4 sm:gap-6 standings-grid">
+                        <div>
+                            <div class="bg-white rounded-lg shadow overflow-hidden mb-4 sm:mb-6">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="py-2 sm:py-3 px-2 sm:px-4 text-center">#</th>
+                                                <th class="py-2 sm:py-3 px-2 sm:px-4 text-left">Equipe</th>
+                                                <th class="py-2 sm:py-3 px-2 sm:px-4 text-center hide-on-mobile">Pontos</th>
+                                                <th class="py-2 sm:py-3 px-2 sm:px-4 text-center">Abates</th>
+                                                <th class="py-2 sm:py-3 px-2 sm:px-4 text-center">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${standingsHTML}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="bg-white rounded-lg shadow overflow-hidden mb-4 sm:mb-6">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="py-2 sm:py-3 px-2 sm:px-4 text-left">Melhores Jogadores</th>
+                                                <th class="py-2 sm:py-3 px-2 sm:px-4 text-center">Abates</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${mvpHTML}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 sm:mt-6">
+                                <button onclick="confirmReset()" class="w-full py-2 px-4 bg-red-100 text-red-600 rounded-lg font-medium hover:bg-red-200 transition flex items-center justify-center text-sm sm:text-base">
+                                    <i class="fas fa-trash-alt mr-2"></i> Reiniciar Torneio
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('main-content').innerHTML = html;
+            
+            // Apply initial hide names state if needed
+            if (data.settings.hideNames) {
+                document.getElementById('main-content').classList.add('hidden-names');
+                document.getElementById('toggle-names-btn').innerHTML = '<i class="fas fa-eye mr-1"></i> Mostrar Nomes';
+            }
+        }
+        
+        // Helper function to calculate points
+        function calculatePoints(position, kills, isFinalMatch = false) {
+            if (!position || position < 1 || position > 12) return kills || 0;
+            
+            let points = 0;
+            
+            // Position points
+            if (position === 1) {
+                points = isFinalMatch ? 24 : 12; // 1st place
+            } else {
+                points = isFinalMatch ? 
+                    (12 - position) * 2 : // Double points for final match
+                    (12 - position);
+            }
+            
+            // Kill points (1 per kill, 2 for final match)
+            points += isFinalMatch ? (kills || 0) * 2 : (kills || 0);
+            
+            return points;
+        }
+        
+        // Update team name
+        function updateTeamName(teamId, newName) {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            data.teams[teamId].name = newName;
+            localStorage.setItem('TournamentData', JSON.stringify(data));
+            loadTeams();
+        }
+        
+        // Update team match data
+        function updateTeamMatchData(teamId, matchId, field, value) {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            const team = data.teams[teamId];
+            const match = team.matches[matchId];
+            
+            // Convert to number (empty string becomes 0)
+            const numValue = value === '' ? 0 : parseInt(value);
+            
+            match[field] = numValue;
+            
+            // Calculate points
+            const isFinalMatch = matchId === 'match5';
+            match.points = calculatePoints(match.position, match.kills, isFinalMatch);
+            
+            localStorage.setItem('TournamentData', JSON.stringify(data));
+            
+            // Reload the view to show updated points
+            if (data.settings.currentTab === 'teams') {
+                loadTeamPoints();
+            }
+        }
+        
+        // Update player name
+        function updatePlayerName(playerId, newName) {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            data.players[playerId].name = newName;
+            localStorage.setItem('TournamentData', JSON.stringify(data));
+        }
+        
+        // Update player kills
+        function updatePlayerKills(playerId, matchId, value) {
+            const data = JSON.parse(localStorage.getItem('TournamentData'));
+            const player = data.players[playerId];
+            
+            // Convert to number (empty string becomes 0)
+            const numValue = value === '' ? 0 : parseInt(value);
+            
+            player.kills[matchId] = numValue;
+            
+            // Update total kills
+            player.totalKills = Object.values(player.kills).reduce((sum, kills) => sum + kills, 0);
+            
+            localStorage.setItem('TournamentData', JSON.stringify(data));
+            
+            // Reload the view to show updated totals
+            if (data.settings.currentTab === 'players') {
+                loadPlayerKills();
+            }
+        }
+        
+        // Confirm reset
+        function confirmReset() {
+            if (confirm('Tem certeza que deseja reiniciar todos os dados do torneio? Esta ação não pode ser desfeita.')) {
+                localStorage.removeItem('TournamentData');
+                initializeData();
+                loadTeams();
+                loadContent('standings');
+            }
+        }
+    </script>
+</body>
+</html>
